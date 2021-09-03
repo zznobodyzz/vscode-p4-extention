@@ -1,0 +1,51 @@
+{
+    "name": "p4",
+    "displayName": "p4",
+    "description": "",
+    "version": "0.0.1",
+    "engines": {
+        "vscode": "^1.59.0"
+    },
+    "categories": [
+        "Programming Languages"
+    ],
+    "activationEvents": [
+        "onLanguage:p4"
+    ],
+    "main": "./src/p4",
+    "contributes": {
+        "commands": [{
+            "command": "p4.synchronize",
+            "title": "Synchronize"
+        }],
+        "menus": {
+            "editor/context": [{
+                "when": "editorFocus && resourceLangId == p4",
+                "command": "p4.synchronize",
+                "group": "navigation@1"
+            }]
+        },
+        "languages": [{
+            "id": "p4",
+            "aliases": ["p4"],
+            "extensions": [".p4"],
+            "configuration": "./language-configuration.json"
+        }],
+        "grammars": [{
+            "language": "p4",
+            "scopeName": "source.p4",
+            "path": "./syntaxes/p4.tmLanguage.json"
+        }]
+    },
+    "scripts": {
+        "postinstall": "node ./node_modules/vscode/bin/install",
+        "test": "node ./node_modules/vscode/bin/test"
+    },
+    "devDependencies": {
+        "typescript": "^2.6.1",
+        "vscode": "^1.1.6",
+        "eslint": "^4.11.0",
+        "@types/node": "^7.0.43",
+        "@types/mocha": "^2.2.42"
+    }
+}

@@ -1,0 +1,130 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "p4",
+	"patterns": [
+		{ "include": "#comments" },
+		{ "include": "#constants" },
+		{ "include": "#names" },
+		{ "include": "#keywords" },
+		{ "include": "#storages" },
+		{ "include": "#strings" },
+		{ "include": "#supports" },
+		{ "include": "#variables" }
+	],
+	"repository": {
+		"comments": {
+			"patterns": [{
+				"name": "comment.line.double-slash.p4",
+				"match": "\/\/[^\n]*"
+			},{
+				"name": "comment.line.double-slash.p4",
+				"begin": "\/\\*",
+				"end": "\\*\/"
+			}]
+		},
+		"constants": {
+			"patterns": [{
+				"name": "constant.numeric.p4",
+				"match": "\\b0[xXbB][0-9a-fA-F]+\\b"
+			},{
+				"name": "constant.numeric.p4",
+				"match": "\\b[0-9]+w(0[xXbB][0-9a-fA-F]+|[0-9]+)\\b"
+			},{
+				"name": "constant.numeric.p4",
+				"match": "\\b[0-9]+\\b"
+			},{
+				"name": "constant.language.p4",
+				"match": "\\b(true|false)\\b"
+			}]
+		},
+		"names": {
+			"patterns": [{
+				"name": "entity.name.function.p4",
+				"match": "(?<=(action|control|table|state)\\s+)[a-zA-Z0-9_]+(?=(\\s*[;(]?))"
+			},{
+				"name": "entity.name.type.p4",
+				"match": "\\b(struct|header|table)\\b"
+			},{
+				"name": "entity.other.inherited-class.p4",
+				"match": "\\b(action|control|state)\\s"
+			}]
+		},
+		"keywords": {
+			"patterns": [{
+				"name": "keyword.control.p4",
+				"match": "\\b(if|exit|accept|select|transition|in|inout|out)\\b"
+			},{
+				"name": "constant.numeric.p4",
+				"match": "(&&&)|(&&)|(\\|\\|)|(==)|(@)"
+			},{
+				"name": "keyword.other.p4",
+				"match": "\\b(exact|ternary|range|index|lpm)\\b"
+			}]
+		},
+		"storages": {
+			"patterns": [{
+				"name": "storage.type.p4",
+				"match": "\\b(bit|int|bool|const|static|extern)\\b"
+			},{
+				"name": "constant.character.escape.p4",
+				"match": "(#include)|(#define)|(#ifdef)|(#ifndef)|(#if)|(#elif)|(#else)|(#endif)"
+			},{
+				"name": "storage.type.p4",
+				"match": "[a-zA-Z0-9_]+(?=((\\[[0-9]+\\])?\\s+)[a-zA-Z0-9_]+(.*[;,\\)]))"
+			}]
+		},
+		"strings": {
+			"patterns": [{
+				"name": "string.quoted.double.p4",
+				"begin": "\"",
+				"end": "\""
+			}]
+		},
+		"supports": {
+			"patterns": [{
+				"name": "support.function.p4",
+				"match": "\\b(emit|isValid|setInvalid|setValid|apply|extract|lookahead|NoAction|get|execute|drop)\\b"
+			},{
+				"name": "support.class.p4",
+				"match": "\\b(Pipeline|Switch|Register|RegisterAction|Hash|Resubmit|Mirror|Counter|ActionSelector)\\b"
+			},{
+				"name": "support.type.p4",
+				"match": "\\btypedef\\b"
+			},{
+				"name": "support.variable.p4",
+				"match": "\\b(key|actions|size|default_action|initial_value)\\b"
+			},{
+				"name": "constant.character.escape.p4",
+				"match": "[a-zA-Z0-9_\\.]+(?=(\\s?*\\:))"
+			},{
+				"name": "support.variable.p4",
+				"match": "(?<=(#define\\s))[a-zA-Z0-9_]+"
+			}]
+		},
+		"variables": {
+			"patterns": [{
+				"name": "variable.language.p4",
+				"match": "(?<=((#if|#ifdef|#elif)\\s+.*))(\\(?\\s*[a-zA-Z0-9_]+\\s*\\)?)(?=((\\s*$)|(\\s*\\|\\|\\s*)|(\\s*&&\\s*)))"
+			},{
+				"name": "variable.parameter.p4",
+				"match": "\\b(emit|isValid|setInvalid|setValid|apply|extract|lookahead|NoAction|get|execute|drop)\\b"
+			},{
+				"name": "variable.language.p4",
+				"match": "\\b\\.(hit|last|next)\\b"
+			},{
+				"name": "variable.other.p4",
+				"match": "(?<=((int|bool|bit<.*>)\\s+))[a-zA-Z0-9_]+(?=(\\s*[;,\\)]\\s*))"
+			},{
+				"name": "variable.other.p4",
+				"match": "(?<=((header|struct)\\s+))[a-zA-Z0-9_]+(?=(\\s*))"
+			},{
+				"name": "variable.other.p4",
+				"match": "(?<=([a-zA-Z0-9_]+(\\[[0-9]+\\])?\\s+))[a-zA-Z0-9_]+(?=(\\s*(\\=\\s?[a-zA-Z0-9_]+\\s*)?[;,\\)]))"
+			},{
+				"name": "variable.other.p4",
+				"match": "(?<=((Register|RegisterAction|Hash|Resubmit|Mirror|Counter|ActionSelector).*))\\s[a-zA-Z0-9_]+(?=(\\s*;))"
+			}]
+		}
+	},
+	"scopeName": "source.p4"
+}
