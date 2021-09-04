@@ -1,20 +1,19 @@
 
+// @ts-ignore
 const vscode = require('vscode');
+// @ts-ignore
 const path = require('path');
+// @ts-ignore
 const fs = require('fs');
+// @ts-ignore
 const readline = require('readline');
-
-const match_exp = ['(?<=(action|control|table|state)\\s+)[a-zA-Z0-9_]+(?=(\\s*[;(]?))',
-                    '(?<=(#define\\s))[a-zA-Z0-9_]+',
-                    '(?<=((int|bool|bit<.*>)\\s+))[a-zA-Z0-9_]+(?=(\\s*[;,\\)]\\s*))',
-                    '(?<=((header|struct)\\s+))[a-zA-Z0-9_]+(?=(\\s*))',
-                    '(?<=((Register|RegisterAction|Hash|Resubmit|Mirror|Counter|ActionSelector).*))\\s[a-zA-Z0-9_]+(?=(\\s*;))',
-                    '(?<=([a-zA-Z0-9_]+(\\[[0-9]+\\])?\\s+))[a-zA-Z0-9_]+(?=(\\s*(\\=\\s?[a-zA-Z0-9_]+\\s*)?[;,\\)]))'];
+const util = require('./util');
+const defexpr = require('./definitionExpr');
+const match_exp = defexpr.definition_match_expr;
 
 var definitionStore = {};
 
 function findDefinitionsInSync(word) {
-    console.log('====== 进入 findDefinitionsInSync 方法 ======');
     if (definitionStore.hasOwnProperty(word)) {
         return definitionStore[word];
     }
@@ -22,20 +21,15 @@ function findDefinitionsInSync(word) {
 }
 
 function getDefinitionsInFile(file) {
-    console.log('====== 进入 getDefinitionsInFile 方法 ======');
-    console.log('read file: ' + file);
     var ret = null;
     var index = 0;
     var data = fs.readFileSync(file, 'utf8');
     var data_p = data.split('\n');
     data_p.forEach(line => {
-        console.log("finding in line: " + index);
-        console.log("text: " + line);
         match_exp.forEach(exp => {
             var regex = new RegExp(exp, 'g');
             var result;
             while ((result = regex.exec(line)) !== null) {
-                console.log("find: " + result[0] + " at: " + result.index);
                 definitionStore[result[0]] = [file, index, result.index];
             }
         })
@@ -44,12 +38,19 @@ function getDefinitionsInFile(file) {
 }
 
 function definitionSync(uri) {
-    console.log('====== 进入 definitionSync 方法 ======');
-    vscode.window.showInformationMessage('Synchronizing...');
-    const workDir     = path.dirname(uri.path.substr(1));
-    console.log('workDir: ' + workDir);
+    vscode.window.setStatusBarMessage('Synchronizing...');
+    var workDir = null;
+    if (!uri) {
+        workDir = util.getProjectPath();
+        if (!workDir) {
+            vscode.window.showInformationMessage('Synchronizing Failed, Try Command In Right Click');
+            return;
+        }
+    } else {
+        workDir = path.dirname(uri.path.substr(1));
+    }
+    
     var files = fs.readdirSync(workDir);
-    console.log(files);
     var ret = null;
     var retTmp = null;
     files.forEach(file => {
@@ -59,7 +60,7 @@ function definitionSync(uri) {
             getDefinitionsInFile(path.join(workDir, file));
         }
     });
-    vscode.window.showInformationMessage('Synchronize Done');
+    vscode.window.setStatusBarMessage('Synchronize Done');
 }
 
 exports.findDefinitionsInSync = findDefinitionsInSync;

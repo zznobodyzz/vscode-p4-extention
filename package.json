@@ -14,16 +14,41 @@
     ],
     "main": "./src/p4",
     "contributes": {
-        "commands": [{
-            "command": "p4.synchronize",
-            "title": "Synchronize"
-        }],
+        "commands": [
+            {
+                "command": "p4.synchronize",
+                "title": "Synchronize"
+            },{
+                "command": "workbench.action.navigateBack",
+                "title": "GoBack"},
+            {
+                "command": "workbench.action.navigateForward",
+                "title": "GoForward"
+            }
+        ],
         "menus": {
             "editor/context": [{
                 "when": "editorFocus && resourceLangId == p4",
                 "command": "p4.synchronize",
                 "group": "navigation@1"
-            }]
+            }],
+			"editor/title": [
+                {
+					"when": "resourceLangId == p4",
+					"command": "workbench.action.navigateBack",
+					"group": "navigation@1"
+				},
+                {
+					"when": "resourceLangId == p4",
+					"command": "workbench.action.navigateForward",
+					"group": "navigation@2"
+				},
+                {
+					"when": "resourceLangId == p4",
+					"command": "p4.synchronize",
+					"group": "navigation@3"
+				}
+			]
         },
         "languages": [{
             "id": "p4",
@@ -47,5 +72,6 @@
         "eslint": "^4.11.0",
         "@types/node": "^7.0.43",
         "@types/mocha": "^2.2.42"
-    }
+    },
+    "publisher":"LivingThings"
 }

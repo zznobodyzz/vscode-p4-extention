@@ -113,7 +113,7 @@
 				"match": "\\b\\.(hit|last|next)\\b"
 			},{
 				"name": "variable.other.p4",
-				"match": "(?<=((int|bool|bit<.*>)\\s+))[a-zA-Z0-9_]+(?=(\\s*[;,\\)]\\s*))"
+				"match": "(?<=((int|bool|bit<.*>)\\s+))[a-zA-Z0-9_]+(?=(\\s*(\\=\\s?[a-zA-Z0-9_]+\\s*)?[;,\\)]))"
 			},{
 				"name": "variable.other.p4",
 				"match": "(?<=((header|struct)\\s+))[a-zA-Z0-9_]+(?=(\\s*))"
