@@ -14,18 +14,19 @@
     ],
     "main": "./src/p4",
     "contributes": {
-        "commands": [
-            {
+        "commands": [{
                 "command": "p4.synchronize",
-                "title": "Synchronize"
+                "title": "Synchronize",
+                "icon": "images/synchronize.svg"
             },{
                 "command": "workbench.action.navigateBack",
-                "title": "GoBack"},
-            {
+                "title": "GoBack",
+                "icon": "images/goback.svg"
+            },{
                 "command": "workbench.action.navigateForward",
-                "title": "GoForward"
-            }
-        ],
+                "title": "GoForward",
+                "icon": "images/goforward.svg"
+            }],
         "menus": {
             "editor/context": [{
                 "when": "editorFocus && resourceLangId == p4",
@@ -36,7 +37,8 @@
                 {
 					"when": "resourceLangId == p4",
 					"command": "workbench.action.navigateBack",
-					"group": "navigation@1"
+					"group": "navigation@1",
+                    "icon": "images/syunchronize.svg"
 				},
                 {
 					"when": "resourceLangId == p4",

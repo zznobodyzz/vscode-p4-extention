@@ -4,7 +4,7 @@ const vscode = require('vscode');
 const path = require('path');
 // @ts-ignore
 const fs = require('fs');
-const defsync = require('./definitionSync');
+const defpro = require('./definitionProcess');
 
 const goto = require('./goto');
 
@@ -19,13 +19,14 @@ function provideHover(document, position, token) {
     const fileName    = document.fileName;
     const workDir     = path.dirname(fileName);
     const word        = document.getText(document.getWordRangeAtPosition(position));
-    var ret = defsync.findDefinitionsInSync(word);
+    var ret = defpro.findDefinitionsInSync(word);
     if (ret !== null) {
+        console.log(ret);
         var data = fs.readFileSync(ret[0], 'utf8');
         var data_p = data.split('\n');
-        return new vscode.Hover(data_p[ret[1]] + "\n" + data_p[ret[1] + 1] + "\n" + data_p[ret[1] + 2]);
+        return new vscode.Hover(data_p[ret[1].line]);
     }
-    return new vscode.Hover("   ");
+    return new vscode.Hover(" ");
 }
 
 module.exports = function(context) {
