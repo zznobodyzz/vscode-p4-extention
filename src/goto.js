@@ -4,11 +4,7 @@ const vscode = require('vscode');
 const path = require('path');
 // @ts-ignore
 const fs = require('fs');
-// @ts-ignore
-const readline = require('readline');
 const defpro = require('./definitionProcess');
-const defexpr = require('./definitionExpr');
-const match_exp = defexpr.definition_match_expr;
 
 function provideDefinition(document, position, token) {
     const fileName    = document.fileName;
@@ -17,9 +13,9 @@ function provideDefinition(document, position, token) {
     const line        = document.lineAt(position);
     var position_out;
 
-    position_out = defpro.findDefinitionsInCurFile(document, position, word);
+    position_out = defpro.findDefinitionsInSync(document, word, position);
     if (position_out === null) {
-        position_out = defpro.findDefinitionsInSync(word);
+        position_out = defpro.findDefinitionsInCurFile(document, position, word);
         if (position_out === null) {
             position_out = defpro.findDefinitionsInAllFile(workDir, fileName, word);
             if (position_out === null) {

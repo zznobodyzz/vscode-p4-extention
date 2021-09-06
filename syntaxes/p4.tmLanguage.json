@@ -112,13 +112,13 @@
 				"name": "variable.language.p4",
 				"match": "\\b\\.(hit|last|next)\\b"
 			},{
-				"name": "variable.other.p4",
+				"name": "support.constant.p4",
 				"match": "(?<=((int|bool|bit<.*>)\\s+))[a-zA-Z0-9_]+(?=(\\s*(\\=\\s?[a-zA-Z0-9_]+\\s*)?[;,\\)]))"
 			},{
 				"name": "variable.other.p4",
 				"match": "(?<=((header|struct)\\s+))[a-zA-Z0-9_]+(?=(\\s*))"
 			},{
-				"name": "variable.other.p4",
+				"name": "support.constant.p4",
 				"match": "(?<=([a-zA-Z0-9_]+(\\[[0-9]+\\])?\\s+))[a-zA-Z0-9_]+(?=(\\s*(\\=\\s?[a-zA-Z0-9_]+\\s*)?[;,\\)]))"
 			},{
 				"name": "variable.other.p4",

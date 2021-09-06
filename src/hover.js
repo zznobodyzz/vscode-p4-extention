@@ -6,20 +6,11 @@ const path = require('path');
 const fs = require('fs');
 const defpro = require('./definitionProcess');
 
-const goto = require('./goto');
-
-
-/**
- * 鼠标悬停提示
- * @param {*} document 
- * @param {*} position 
- * @param {*} token 
- */
 function provideHover(document, position, token) {
     const fileName    = document.fileName;
     const workDir     = path.dirname(fileName);
     const word        = document.getText(document.getWordRangeAtPosition(position));
-    var ret = defpro.findDefinitionsInSync(word);
+    var ret = defpro.findDefinitionsInSync(document, word, position);
     if (ret !== null) {
         console.log(ret);
         var data = fs.readFileSync(ret[0], 'utf8');

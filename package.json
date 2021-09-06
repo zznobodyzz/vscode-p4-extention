@@ -17,15 +17,24 @@
         "commands": [{
                 "command": "p4.synchronize",
                 "title": "Synchronize",
-                "icon": "images/synchronize.svg"
+                "icon": {
+                    "light": "images/synchronize_light.svg",
+                    "dark": "images/synchronize_dark.svg"
+                }
             },{
                 "command": "workbench.action.navigateBack",
                 "title": "GoBack",
-                "icon": "images/goback.svg"
+                "icon": {
+                    "light": "images/goback_light.svg",
+                    "dark": "images/goback_dark.svg"
+                }
             },{
                 "command": "workbench.action.navigateForward",
                 "title": "GoForward",
-                "icon": "images/goforward.svg"
+                "icon": {
+                    "light": "images/goforward_light.svg",
+                    "dark": "images/goforward_dark.svg"
+                }
             }],
         "menus": {
             "editor/context": [{

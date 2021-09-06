@@ -1,11 +1,5 @@
 const vscode = require('vscode');
-// @ts-ignore
-const path = require('path');
-// @ts-ignore
-const fs = require('fs');
-const util = require('./util');
 const defpro = require('./definitionProcess');
-const defexpr = require('./definitionExpr');
 
 var lastTypeString = null;
 var lastCompletion = null;
