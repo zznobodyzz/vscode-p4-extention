@@ -84,5 +84,9 @@
         "@types/node": "^7.0.43",
         "@types/mocha": "^2.2.42"
     },
-    "publisher":"LivingThings"
+    "publisher":"LivingThings",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/zznobodyzz/vscode-p4-extention"
+    }
 }
