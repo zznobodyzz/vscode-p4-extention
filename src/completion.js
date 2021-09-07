@@ -6,7 +6,7 @@ var lastTypeString = null;
 var lastCompletion = null;
 
 function getSearchWords(lineText) {
-    const expr = "\\b([a-zA-Z0-9_\\.]+)+"
+    const expr = "\\b([a-zA-Z0-9_]+\\.)+[a-zA-Z0-9_]+"
     var regex = new RegExp(expr);
     var ret;
     var words = [];
