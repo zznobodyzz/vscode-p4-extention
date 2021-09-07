@@ -1,3 +1,4 @@
+// @ts-ignore
 const vscode = require('vscode');
 const defpro = require('./definitionProcess');
 
@@ -16,7 +17,6 @@ function getSearchWords(lineText) {
 }
 
 function provideCompletionItems(document, position, token, context) {
-    console.log("in provideCompletionItems");
     const lineText = document.lineAt(position).text.substring(0, position.character);
     let variables = [];
     let lastCha = lineText.substr(lineText.length - 1);

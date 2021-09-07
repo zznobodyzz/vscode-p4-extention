@@ -12,7 +12,6 @@ function provideHover(document, position, token) {
     const word        = document.getText(document.getWordRangeAtPosition(position));
     var ret = defpro.findDefinitionsInSync(document, word, position);
     if (ret !== null) {
-        console.log(ret);
         var data = fs.readFileSync(ret[0], 'utf8');
         var data_p = data.split('\n');
         return new vscode.Hover(data_p[ret[1].line]);

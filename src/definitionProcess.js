@@ -116,6 +116,17 @@ function CdefinitionStore() {
         return this.definitionPosition[name][0].getFile();
     }
 
+    this.getRepeatDefByFileName = function(name, fileName) {
+        let retval = null;
+        this.definitionPosition[name].some( defPos => {
+            if (defPos.getFile() === fileName) {
+                retval = [defPos.getFile(), new vscode.Position(defPos.getLine(), defPos.getCharactor())];
+                return true;
+            }
+        })
+        return retval;
+    }
+
     this.getRepeatDefExactInfo = function(name, positionInfo) {
         var retval = null;
         this.definitionPosition[name].some( defPos => {
@@ -238,12 +249,53 @@ function getDefinitionsInFile(file) {
     var data = fs.readFileSync(file, 'utf8');
     var data_p = data.split('\n');
     data_p.forEach(line => {
+        if (line.search("transition") !== -1) {
+            index += 1;
+            return;
+        }
         ret = getNameInLine(line, "all", defexpr.d_exp);
         ret.getAllMatchWord().forEach( word => {
             definitionStore.addDefInfo(word, file, index, ret.getWordPostion(word));
         })
         index += 1;
     });
+}
+
+function getEnumInfo(file, data_p, line, enumName) {
+    var op = 0;
+    var set = false;
+    let lineNum = 0;
+    var result = new CtypeStore();
+    if (data_p[line + lineNum].search("{") !== -1) {
+        op += 1;
+        set = true;
+    }
+    lineNum += 1;
+    while (line + lineNum < data_p.length) {
+        var index = line + lineNum;
+        if (data_p[index].search("{") !== -1) {
+            op += 1;
+            set = true;
+        } else if(data_p[index].search("}") !== -1){
+            op -= 1;
+        }
+        if (op === 0 && set) {
+            lineNum += 1;
+            break;
+        }
+        let variableName = getNameInLine(data_p[index], "one", defexpr.ev_exp);
+        if (!variableName.isMatch()) {
+            lineNum += 1;
+            continue;
+        }
+        if (!result.isKnownVariable(variableName.getFirstMatchWord())) {
+            result.addTypeInfo(variableName.getFirstMatchWord(), enumName, file, index, variableName.getWordPostion(variableName.getFirstMatchWord()));
+            definitionStore.addDefInfo(variableName.getFirstMatchWord(), file, index, variableName.getWordPostion(variableName.getFirstMatchWord()));
+        }
+        lineNum += 1;
+    }
+    result.setLineNums(lineNum);
+    return result;
 }
 
 function getStructInfo(file, data_p, line) {
@@ -299,7 +351,12 @@ function getAllParamsInDefinition(file, data_p, start_line) {
     }
     var typeName = getNameInLine(data_p[line], "one", defexpr.t_exp);
     if (typeName.isMatch()) {
-        var ret = getStructInfo(file, data_p, line);
+        var ret;
+        if (data_p[line].search("enum") !== -1) {
+            ret = getEnumInfo(file, data_p, line, typeName.getFirstMatchWord());
+        } else{
+            ret = getStructInfo(file, data_p, line);
+        }
         if (!ret.isEmpty()) {
             definitionStore.addTypeInfo(typeName.getFirstMatchWord(), ret);
         }
@@ -345,11 +402,10 @@ function definitionSync(uri) {
             getDefinitionRelationShip(path.join(workDir, file));
         }
     });
-    console.log(definitionStore.definitionTypeInfo);
     vscode.window.setStatusBarMessage('Synchronize Done');
 }
 
-function getRelationWords(document, word, position) {
+function getRelationWords(document, position) {
     let line = document.lineAt(position).text;
     line = line.substr(0, position.character);
     let exp = "\\b([a-zA-Z0-9_]+\\.)+";
@@ -362,6 +418,15 @@ function getRelationWords(document, word, position) {
     return words.split(".");
 }
 
+function getDefinePositionbyFile(fileName, word) {
+    let retval = definitionStore.getRepeatDefByFileName(word, fileName)
+    if (retval === null) {
+        return [definitionStore.getDefFileName(word), definitionStore.getDefFilePosition(word)];
+    } else {
+        return retval;
+    }
+}
+
 function findDefinitionsInSync(document, word, position) {
     if (!definitionStore.isKnownDef(word)) {
         return null;
@@ -370,21 +435,20 @@ function findDefinitionsInSync(document, word, position) {
         return [definitionStore.getDefFileName(word), definitionStore.getDefFilePosition(word)];
     }
     var words = null;
-    let retval = [definitionStore.getDefFileName(word), definitionStore.getDefFilePosition(word)];
-    if ((words = getRelationWords(document, word, position)) === null) {
-        return retval;
+    if ((words = getRelationWords(document, position)) === null) {
+        return getDefinePositionbyFile(document.fileName, word);
     }
     let typeInfo = getDefinitionCompletionItem(document, position, words);
     if (typeInfo === null) {
-        return retval;
+        return getDefinePositionbyFile(document.fileName, word);
     }
     if (!typeInfo.isKnownVariable(word)) {
-        return retval;
+        return getDefinePositionbyFile(document.fileName, word);
     }
     let PositionInfo = typeInfo.getVariablePositionInfo(word);
     let DefinePositionInfo = definitionStore.getRepeatDefExactInfo(word, PositionInfo);
     if (DefinePositionInfo === null) {
-        return retval;
+        return getDefinePositionbyFile(document.fileName, word);
     }
     return [DefinePositionInfo[0], new vscode.Position(DefinePositionInfo[1], DefinePositionInfo[2])];
 }

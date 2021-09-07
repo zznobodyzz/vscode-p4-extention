@@ -40,7 +40,7 @@
 		"names": {
 			"patterns": [{
 				"name": "entity.name.function.p4",
-				"match": "(?<=(action|control|table|state)\\s+)[a-zA-Z0-9_]+(?=(\\s*[;(]?))"
+				"match": "(?<=(action|control|table|state|parser)\\s+)[a-zA-Z0-9_]+(?=(\\s*[;(]?))"
 			},{
 				"name": "entity.name.type.p4",
 				"match": "\\b(struct|header|table)\\b"
