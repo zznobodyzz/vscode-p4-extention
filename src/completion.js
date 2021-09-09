@@ -5,26 +5,16 @@ const defpro = require('./definitionProcess');
 var lastTypeString = null;
 var lastCompletion = null;
 
-function getSearchWords(lineText) {
-    const expr = "\\b([a-zA-Z0-9_]+\\.)+[a-zA-Z0-9_]+"
-    var regex = new RegExp(expr);
-    var ret;
-    var words = [];
-    if ((ret = regex.exec(lineText)) !== null) {
-        words = ret[0].split(".");
-    }
-    return words;
-}
-
 function provideCompletionItems(document, position, token, context) {
-    const lineText = document.lineAt(position).text.substring(0, position.character);
+    const lineText = document.lineAt(position).text.substr(0, position.character);
     let variables = [];
     let lastCha = lineText.substr(lineText.length - 1);
     if (lastCha === ".") {
-        let words = getSearchWords(lineText.substr(0, lineText.length - 1));
+        let positionTmp = new vscode.Position(position.line, position.character - 1);
+        let words = defpro.getCompletionRelationWords(document, position, document.getText(document.getWordRangeAtPosition(positionTmp)));
         var ret = defpro.getDefinitionCompletionItem(document, position, words);
         if (ret !== null) {
-            variables = ret.getAllVariable();
+            variables = ret.getElements();
             variables.sort();
             lastTypeString = lineText.substr(0, lineText.length - 1);
             lastCompletion = variables;
@@ -56,8 +46,5 @@ function resolveCompletionItem(item, token) {
 }
 
 module.exports = function(context) {
-    context.subscriptions.push(vscode.languages.registerCompletionItemProvider('p4', {
-        provideCompletionItems,
-        resolveCompletionItem
-    }, '.'));
+    context.subscriptions.push(vscode.languages.registerCompletionItemProvider('p4', {provideCompletionItems, resolveCompletionItem}, '.'));
 };

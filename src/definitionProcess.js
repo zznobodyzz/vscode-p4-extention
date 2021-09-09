@@ -7,227 +7,23 @@ const path = require('path');
 const fs = require('fs');
 const util = require('./util');
 const defexpr = require('./definitionExpr');
+const defProH = require('./definitionProcess_h');
 
-function CdefinitionPositionInfo() {
-    this.file = null;
-    this.line = null;
-    this.charactor = null;
-
-    this.setPosition = function(file, line, charactor) {
-        this.file = file;
-        this.line = line;
-        this.charactor = charactor;
-    }
-
-    this.getFile = function() {
-        return this.file;
-    }
-
-    this.getLine = function() {
-        return this.line;
-    }
-
-    this.getCharactor = function() {
-        return this.charactor;
-    }
-
-    this.getAll = function() {
-        return [this.file, this.line, this.charactor];
-    }
-
-    this.isEqual = function(other) {
-        return (this.file === other.file && this.line === other.line);
-    }
-}
-
-/*store variableName => typeName, lines*/
-function CtypeStore() {
-    this.result = {};
-    this.lineNums = 0;
-
-    this.addTypeInfo = function(variableName, typeName, file, line, character) {
-        var definitionPositionInfo = new CdefinitionPositionInfo();
-        definitionPositionInfo.setPosition(file, line, character);
-        this.result[variableName] = [typeName, definitionPositionInfo];
-    }
-
-    this.setLineNums = function(lineNums) {
-        this.lineNums = lineNums;
-    }
-
-    this.getLineNums = function() {
-        return this.lineNums;
-    }
-
-    this.isKnownVariable = function(variableName) {
-        return this.result.hasOwnProperty(variableName);
-    }
-
-    this.getVariableTypeName = function(variableName) {
-        return this.result[variableName][0];
-    }
-
-    this.getVariablePositionInfo = function(variableName) {
-        return this.result[variableName][1];
-    }
-
-    this.getAllVariable = function() {
-        return Object.keys(this.result);
-    }
-
-    this.isEmpty = function() {
-        return Object.keys(this.result).length === 0;
-    }
-}
-
-function CdefinitionStore() {
-    this.definitionPosition = {};
-    this.definitionTypeInfo = {};
-    this.definitionTypedefInfo = {};
-
-    this.clearAll = function() {
-        this.definitionPosition = {};
-        this.definitionTypeInfo = {};
-        this.definitionTypedefInfo = {};
-    }
-
-    this.addDefInfo = function(name, fileName, line, character) {
-        var definitionPositionInfo = new CdefinitionPositionInfo();
-        definitionPositionInfo.setPosition(fileName, line, character);
-        if (this.definitionPosition[name] === undefined) {
-            this.definitionPosition[name] = [];
-        }
-        this.definitionPosition[name].push(definitionPositionInfo);
-    }
-
-    this.addTypeInfo = function(name, typeStore) {
-        this.definitionTypeInfo[name] = typeStore;
-    }
-
-    this.addTypedefInfo = function(name, typedefInfo) {
-        this.definitionTypedefInfo[name] = typedefInfo;
-    }
-
-    this.getDefFilePosition = function(name) {
-        return new vscode.Position(this.definitionPosition[name][0].getLine(), this.definitionPosition[name][0].getCharactor());
-    }
-
-    this.getDefFileName = function(name) {
-        return this.definitionPosition[name][0].getFile();
-    }
-
-    this.getRepeatDefByFileName = function(name, fileName) {
-        let retval = null;
-        this.definitionPosition[name].some( defPos => {
-            if (defPos.getFile() === fileName) {
-                retval = [defPos.getFile(), new vscode.Position(defPos.getLine(), defPos.getCharactor())];
-                return true;
-            }
-        })
-        return retval;
-    }
-
-    this.getRepeatDefExactInfo = function(name, positionInfo) {
-        var retval = null;
-        this.definitionPosition[name].some( defPos => {
-            if (defPos.isEqual(positionInfo)) {
-                retval = defPos.getAll();
-                return true;
-            }
-        });
-        return retval;
-    }
-
-    this.getTypedefInfo = function(name) {
-        return this.definitionTypedefInfo[name];
-    }
-
-    this.getTypeInfo = function(name) {
-        return this.definitionTypeInfo[name];
-    }
-
-    this.isKnownDef = function(name) {
-        return this.definitionPosition[name] !== undefined;
-    }
-
-    this.isRepeatDef = function(name) {
-        if (this.isKnownDef(name)) {
-            if (this.definitionPosition[name].length > 1) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    this.isKnownType = function(name) {
-        return this.definitionTypeInfo.hasOwnProperty(name);
-    }
-
-    this.isKnownTypedef = function(name) {
-        return this.definitionTypedefInfo.hasOwnProperty(name);
-    }
-}
-
-function regexSearchResult() {
-    this.result = {};
-
-    this.isMatch = function() {
-        return !(Object.keys(this.result).length === 0);
-    }
-
-    this.getFirstMatchWord = function() {
-        if (this.isMatch()) {
-            return Object.keys(this.result)[0];
-        }
-        return null;
-    }
-
-    this.getLastMatchWord = function() {
-        if (this.isMatch()) {
-            let keys = Object.keys(this.result);
-            return keys[keys.length - 1];
-        }
-        return null;
-    }
-
-    this.addResult = function(word, index) {
-        this.result[word] = index;
-    }
-
-    this.combineResult = function(other) {
-        var tmp = other.getResult();
-        for (var key in tmp) {
-            this.result[key] = tmp[key];
-        }
-    }
-
-    this.getAllMatchWord = function() {
-        return Object.keys(this.result);
-    }
-
-    this.getWordPostion = function(word) {
-        if (this.result.hasOwnProperty(word)) {
-            return this.result[word];
-        }
-        return null;
-    }
-
-    this.getResult = function() {
-        return this.result;
-    }
-}
-
-var definitionStore = new CdefinitionStore();
+let defStore = new defProH.CdefStore();
+let fileRelation = new defProH.CfileRelation();
+let CregexSearchResult = defProH.CregexSearchResult;
+let refStore = new defProH.CrefStore();
 
 function doRegexSearch(exp, string, search_mode) {
-    var regex = new RegExp(exp, "g");
-    var searchResult = new regexSearchResult();
+    var searchResult = new CregexSearchResult();
     var result;
     if (search_mode === "all") {
+        var regex = new RegExp(exp, "g");
         while ((result = regex.exec(string)) !== null) {
             searchResult.addResult(result[0], result.index);
         }
     } else {
+        var regex = new RegExp(exp);
         if ((result = regex.exec(string)) !== null) {
             searchResult.addResult(result[0], result.index);
         }
@@ -236,317 +32,526 @@ function doRegexSearch(exp, string, search_mode) {
 }
 
 function getNameInLine(lineText, search_type, expr) {
-    var retval = new regexSearchResult();
+    var retval = new CregexSearchResult();
     expr.forEach(exp => {
         retval.combineResult(doRegexSearch(exp, lineText, search_type));
     });
     return retval;
 }
 
+function getSdkFuncInfo(file, data_p, lineNum) {
+    var structInfo = new defProH.CstructInfo();
+    var op = 0;
+    var set = false;
+    let line = data_p[lineNum];
+    if (line.search("{") !== -1) {
+        op += 1;
+        set = true;
+    }
+    if (line.search(";") !== -1) {
+        structInfo.setStructLineNum(1);
+        return structInfo;
+    }
+    lineNum += 1;
+    var i = lineNum;
+    for (i = lineNum; i < data_p.length; i++) {
+        if (data_p[i].search("{") !== -1) {
+            op += 1;
+            set = true;
+        } else if(data_p[i].search("}") !== -1){
+            op -= 1;
+        }
+        if (op === 0 && set) {
+            i++;
+            break;
+        }
+        let ret = getNameInLine(data_p[i], "one", defexpr.sdk_func_exp);
+        if (!ret.isMatch()) {
+            continue;
+        }
+        let funcName = ret.getOneMatch();
+        let character = ret.getOneCharacter();
+        let defDetail = new defProH.CdefDetail();
+        defDetail.setPosition(new defProH.CPosition(file, i, character))
+        defDetail.setDefType("sdk_func");
+        structInfo.addElememtDetail(funcName, defDetail);
+    }
+    structInfo.setStructLineNum(i - lineNum);
+    return structInfo;
+}
+
+function getStructureInfo(file, data_p, lineNum) {
+    var structInfo = new defProH.CstructInfo();
+    var op = 0;
+    var set = false;
+    let line = data_p[lineNum];
+    if (line.search("{") !== -1) {
+        op += 1;
+        set = true;
+    }
+    lineNum += 1;
+    var i = lineNum;
+    for (i = lineNum; i < data_p.length; i++) {
+        if (data_p[i].search("{") !== -1) {
+            op += 1;
+            set = true;
+        } else if(data_p[i].search("}") !== -1){
+            op -= 1;
+        }
+        if (op === 0 && set) {
+            i++;
+            break;
+        }
+        let ret = getNameInLine(data_p[i], "one", defexpr.variable_exp);
+        if (!ret.isMatch()) {
+            continue;
+        }
+        let variableName = ret.getOneMatch();
+        let variableCharacter = ret.getOneCharacter();
+        ret = getNameInLine(data_p[i], "one", defexpr.variable_type_exp);
+        if (!ret.isMatch()) {
+            continue;
+        }
+        let variableTypeName = ret.getOneMatch();
+        let defDetail = new defProH.CdefDetail();
+        defDetail.setPosition(new defProH.CPosition(file, i, variableCharacter))
+        defDetail.setVariableType(variableTypeName);
+        defDetail.setDefType("variable");
+        structInfo.addElememtDetail(variableName, defDetail);
+    }
+    structInfo.setStructLineNum(i - lineNum);
+    return structInfo;
+}
+
+function getEnumInfo(file, data_p, lineNum) {
+    var structInfo = new defProH.CstructInfo();
+    var op = 0;
+    var set = false;
+    let line = data_p[lineNum];
+    let enumValue = 0;
+    if (line.search("{") !== -1) {
+        op += 1;
+        set = true;
+    }
+    lineNum += 1;
+    var i = lineNum;
+    for (i = lineNum; i < data_p.length; i++) {
+        if (data_p[i].search("{") !== -1) {
+            op += 1;
+            set = true;
+        } else if(data_p[i].search("}") !== -1){
+            op -= 1;
+        }
+        if (op === 0 && set) {
+            i++;
+            break;
+        }
+        let ret = getNameInLine(data_p[i], "one", defexpr.enum_variable_exp);
+        if (!ret.isMatch()) {
+            continue;
+        }
+        let enumVariable = ret.getOneMatch();
+        let character = ret.getOneCharacter();
+        ret = getNameInLine(data_p[i], "one", defexpr.enum_value_exp);
+        if (ret.isMatch()) {
+            enumValue = parseInt(ret.getOneMatch());
+        }
+        let defDetail = new defProH.CdefDetail();
+        defDetail.setPosition(new defProH.CPosition(file, i, character))
+        defDetail.setDefType("enum_variable");
+        defDetail.setMeta(enumValue);
+        structInfo.addElememtDetail(enumVariable, defDetail);
+        enumValue += 1;
+    }
+    structInfo.setStructLineNum(i - lineNum);
+    return structInfo;
+}
+
+function generateCommonDefDetail(file, lineNum, character, defType) {
+    let defDetail = new defProH.CdefDetail();
+    let position = new defProH.CPosition(file, lineNum, character);
+    defDetail.setDefType(defType);
+    defDetail.setPosition(position);
+    return defDetail;
+}
+
+function generateTablecDefDetail(file, lineNum, character) {
+    let defDetail = new defProH.CdefDetail();
+    let position = new defProH.CPosition(file, lineNum, character);
+    let structInfo = new defProH.CstructInfo();
+    structInfo.addElememtDetail("apply()", null);
+    structInfo.addElememtDetail("hit", null);
+    defDetail.setDefType("table");
+    defDetail.setPosition(position);
+    defDetail.setStructInfo(structInfo);
+    return defDetail;
+}
+
+function generateFuncDefDetail(file, lineNum, character) {
+    let defDetail = new defProH.CdefDetail();
+    let position = new defProH.CPosition(file, lineNum, character);
+    let structInfo = new defProH.CstructInfo();
+    structInfo.addElememtDetail("apply()", null);
+    defDetail.setDefType("function");
+    defDetail.setPosition(position);
+    defDetail.setStructInfo(structInfo);
+    return defDetail;
+}
+
+function generateSdkDefDetail(file, lineNum, character, data_p) {
+    let defDetail = new defProH.CdefDetail();
+    let position = new defProH.CPosition(file, lineNum, character);
+    let structInfo = getSdkFuncInfo(file, data_p, lineNum);
+    defDetail.setDefType("sdk_obj");
+    defDetail.setPosition(position);
+    defDetail.setStructInfo(structInfo);
+    return defDetail;
+}
+
+function generateVariableDefDetail(file, lineNum, character, typeName) {
+    let defDetail = new defProH.CdefDetail();
+    let position = new defProH.CPosition(file, lineNum, character);
+    defDetail.setDefType("variable");
+    defDetail.setVariableType(typeName);
+    defDetail.setPosition(position);
+    return defDetail;
+}
+
+function generateAliasDefDetail(file, lineNum, character, originName) {
+    let defDetail = new defProH.CdefDetail();
+    let position = new defProH.CPosition(file, lineNum, character);
+    defDetail.setDefType("alias");
+    defDetail.setOriginName(originName);
+    defDetail.setPosition(position);
+    return defDetail;
+}
+
+function generateStructDefDetail(file, lineNum, character, data_p, defType) {
+    let defDetail = new defProH.CdefDetail();
+    let position = new defProH.CPosition(file, lineNum, character);
+    let structInfo = getStructureInfo(file, data_p, lineNum);
+    defDetail.setDefType(defType);
+    defDetail.setPosition(position);
+    defDetail.setStructInfo(structInfo);
+    return defDetail;
+}
+
+function generateEnumDefDetail(file, lineNum, character, data_p) {
+    let defDetail = new defProH.CdefDetail();
+    let position = new defProH.CPosition(file, lineNum, character);
+    let structInfo = getEnumInfo(file, data_p, lineNum);
+    defDetail.setDefType("enum");
+    defDetail.setPosition(position);
+    defDetail.setStructInfo(structInfo);
+    return defDetail;
+}
+
 function getDefinitionsInFile(file) {
     var ret = null;
-    var index = 0;
     var data = fs.readFileSync(file, 'utf8');
     var data_p = data.split('\n');
-    data_p.forEach(line => {
-        if (line.search("transition") !== -1) {
-            index += 1;
-            return;
-        }
-        ret = getNameInLine(line, "all", defexpr.d_exp);
-        ret.getAllMatchWord().forEach( word => {
-            definitionStore.addDefInfo(word, file, index, ret.getWordPostion(word));
-        })
-        index += 1;
-    });
-}
-
-function getEnumInfo(file, data_p, line, enumName) {
-    var op = 0;
-    var set = false;
-    let lineNum = 0;
-    var result = new CtypeStore();
-    if (data_p[line + lineNum].search("{") !== -1) {
-        op += 1;
-        set = true;
-    }
-    lineNum += 1;
-    while (line + lineNum < data_p.length) {
-        var index = line + lineNum;
-        if (data_p[index].search("{") !== -1) {
-            op += 1;
-            set = true;
-        } else if(data_p[index].search("}") !== -1){
-            op -= 1;
-        }
-        if (op === 0 && set) {
-            lineNum += 1;
-            break;
-        }
-        let variableName = getNameInLine(data_p[index], "one", defexpr.ev_exp);
-        if (!variableName.isMatch()) {
-            lineNum += 1;
+    var skip = 1;
+    for (var lineNum = 0; lineNum < data_p.length; lineNum+=skip) {
+        let line = data_p[lineNum];
+        skip = 1;
+        ret = getNameInLine(line, "one", defexpr.anti_exp);
+        if (ret.isMatch()) {
             continue;
         }
-        if (!result.isKnownVariable(variableName.getFirstMatchWord())) {
-            result.addTypeInfo(variableName.getFirstMatchWord(), enumName, file, index, variableName.getWordPostion(variableName.getFirstMatchWord()));
-            definitionStore.addDefInfo(variableName.getFirstMatchWord(), file, index, variableName.getWordPostion(variableName.getFirstMatchWord()));
-        }
-        lineNum += 1;
-    }
-    result.setLineNums(lineNum);
-    return result;
-}
-
-function getStructInfo(file, data_p, line) {
-    var op = 0;
-    var set = false;
-    let lineNum = 0;
-    var result = new CtypeStore();
-    if (data_p[line + lineNum].search("{") !== -1) {
-        op += 1;
-        set = true;
-    }
-    lineNum += 1;
-    while (line + lineNum < data_p.length) {
-        var index = line + lineNum;
-        if (data_p[index].search("{") !== -1) {
-            op += 1;
-            set = true;
-        } else if(data_p[index].search("}") !== -1){
-            op -= 1;
-        }
-        if (op === 0 && set) {
-            lineNum += 1;
-            break;
-        }
-        let variableName = getNameInLine(data_p[index], "one", defexpr.v_exp);
-        if (!variableName.isMatch()) {
-            lineNum += 1;
+        ret = getNameInLine(line, "one", defexpr.include_exp);
+        if (ret.isMatch()) {
+            fileRelation.addFileRelation(file, path.join(path.dirname(file),ret.getOneMatch()))
             continue;
         }
-        let typeName = getNameInLine(data_p[index], "one", defexpr.vt_exp);
-        if (!typeName.isMatch()) {
-            lineNum += 1;
+        ret = getNameInLine(line, "one", defexpr.state_exp);
+        if (ret.isMatch()) {
+            let defDetail = generateCommonDefDetail(file, lineNum, ret.getOneCharacter(), "state");
+            defStore.addDef(ret.getOneMatch(), defDetail);
             continue;
         }
-        if (!result.isKnownVariable(variableName.getFirstMatchWord())) {
-            result.addTypeInfo(variableName.getFirstMatchWord(), typeName.getFirstMatchWord(), file, index, variableName.getWordPostion(variableName.getFirstMatchWord()));
+        ret = getNameInLine(line, "one", defexpr.table_exp);
+        if (ret.isMatch()) {
+            let defDetail = generateTablecDefDetail(file, lineNum, ret.getOneCharacter());
+            defStore.addDef(ret.getOneMatch(), defDetail);
+            continue;
         }
-        lineNum += 1;
+        ret = getNameInLine(line, "one", defexpr.func_exp);
+        if (ret.isMatch()) {
+            let defDetail = generateFuncDefDetail(file, lineNum, ret.getOneCharacter());
+            defStore.addDef(ret.getOneMatch(), defDetail);
+            continue;
+        }
+        ret = getNameInLine(line, "one", defexpr.define_exp);
+        if (ret.isMatch()) {
+            let defDetail = generateCommonDefDetail(file, lineNum, ret.getOneCharacter(), "define");
+            defStore.addDef(ret.getOneMatch(), defDetail);
+            continue;
+        }
+        ret = getNameInLine(line, "one", defexpr.sdk_obj_exp);
+        if (ret.isMatch()) {
+            let defDetail = generateSdkDefDetail(file, lineNum, ret.getOneCharacter(), data_p);
+            defStore.addDef(ret.getOneMatch(), defDetail);
+            skip = defDetail.getStructInfo().getStructLineNum();
+            continue;
+        }
+        ret = getNameInLine(line, "one", defexpr.alias_exp);
+        if (ret.isMatch()) {
+            let ret2 = getNameInLine(line, "one", defexpr.origin_exp);
+            if (ret2.isMatch()) {
+                let defDetail = generateAliasDefDetail(file, lineNum, ret.getOneCharacter(), ret2.getOneMatch());
+                defStore.addDef(ret.getOneMatch(), defDetail);
+            }
+        }
+        ret = getNameInLine(line, "all", defexpr.variable_exp);
+        if (ret.isMatch()) {
+            let ret2 = getNameInLine(line, "all", defexpr.variable_type_exp);
+            if (ret.getMatchNum() === ret2.getMatchNum()) {
+                for (var i = 0; i < ret.getMatchNum(); i++) {
+                    let variableName = ret.getMatchByIndex(i);
+                    let variableCharacter = ret.getCharacterByIndex(i);
+                    let variableTypeName = ret2.getMatchByIndex(i);
+                    let defDetail = generateVariableDefDetail(file, lineNum, variableCharacter, variableTypeName);
+                    defStore.addDef(variableName, defDetail);
+                }
+                continue;
+            }
+        }
+        ret = getNameInLine(line, "one", defexpr.struct_exp);
+        if (ret.isMatch()) {
+            let defDetail = generateStructDefDetail(file, lineNum, ret.getOneCharacter(), data_p, "struct");
+            defStore.addDef(ret.getOneMatch(), defDetail);
+            skip = defDetail.getStructInfo().getStructLineNum();
+            continue;
+        }
+        ret = getNameInLine(line, "one", defexpr.header_exp);
+        if (ret.isMatch()) {
+            let defDetail = generateStructDefDetail(file, lineNum, ret.getOneCharacter(), data_p, "header");
+            defStore.addDef(ret.getOneMatch(), defDetail);
+            skip = defDetail.getStructInfo().getStructLineNum();
+            continue;
+        }
+        ret = getNameInLine(line, "one", defexpr.enum_exp);
+        if (ret.isMatch()) {
+            let defDetail = generateEnumDefDetail(file, lineNum, ret.getOneCharacter(), data_p);
+            defStore.addDef(ret.getOneMatch(), defDetail);
+            skip = defDetail.getStructInfo().getStructLineNum();
+            continue;
+        }
     }
-    result.setLineNums(lineNum);
-    return result;
 }
 
-function getAllParamsInDefinition(file, data_p, start_line) {
-    var line = start_line;
-    var typedefName = getNameInLine(data_p[line], "one", defexpr.td_exp);
-    if (typedefName.isMatch()) {
-        var typedefTypeName = getNameInLine(data_p[line], "one", defexpr.tdt_exp);
-        if (typedefTypeName.isMatch()) { 
-            definitionStore.addTypedefInfo(typedefName.getFirstMatchWord(), typedefTypeName.getFirstMatchWord());
-        }
-        return 1;
-    }
-    var typeName = getNameInLine(data_p[line], "one", defexpr.t_exp);
-    if (typeName.isMatch()) {
-        var ret;
-        if (data_p[line].search("enum") !== -1) {
-            ret = getEnumInfo(file, data_p, line, typeName.getFirstMatchWord());
-        } else{
-            ret = getStructInfo(file, data_p, line);
-        }
-        if (!ret.isEmpty()) {
-            definitionStore.addTypeInfo(typeName.getFirstMatchWord(), ret);
-        }
-        return ret.getLineNums();
-    }
-    return 1;
-}
-
-function getDefinitionRelationShip(file) {
+function getReferencesInFile(file) {
     var ret = null;
-    var index = 0;
     var data = fs.readFileSync(file, 'utf8');
     var data_p = data.split('\n');
-    while (index < data_p.length) {
-        let line = data_p[index];
-        var match = false;
-        let skipLine = getAllParamsInDefinition(file, data_p, index);
-        index += skipLine;
+    for (var lineNum = 0; lineNum < data_p.length; lineNum++) {
+        let line = data_p[lineNum];
+        ret = getNameInLine(line, "one", defexpr.ref_exp);
+        if (ret.isMatch()) {
+            ret.getAllMatch().forEach( match => {
+                var refPos = new defProH.CPosition(file, lineNum, ret.getCharacter(match));
+                refStore.addRef(match, refPos);
+            });
+        }
     }
 }
 
 function definitionSync(uri) {
-    definitionStore.clearAll();
     vscode.window.setStatusBarMessage('Synchronizing...');
+    defStore.clear();
     var workDir = null;
     if (!uri) {
         workDir = util.getProjectPath();
         if (!workDir) {
-            vscode.window.showInformationMessage('Synchronizing Failed, Try Command In Right Click');
+            vscode.window.showInformationMessage('Synchronizing Failed, Try Command In Right Click.');
             return;
         }
+    } else if (uri.path.search("\\.") !== -1){
+        workDir = path.dirname(uri.fsPath);
     } else {
-        workDir = path.dirname(uri.path.substr(1));
+        workDir = uri.fsPath;
     }
+    console.log(workDir);
     var files = fs.readdirSync(workDir);
-    var ret = null;
-    var retTmp = null;
     files.forEach(file => {
         var s1 = file.substr(0,1);
         var s2 = file.substr(-3,3);
         if (s1 !== "." && s2 === ".p4") {
             getDefinitionsInFile(path.join(workDir, file));
-            getDefinitionRelationShip(path.join(workDir, file));
+            getReferencesInFile(path.join(workDir, file));
         }
     });
-    vscode.window.setStatusBarMessage('Synchronize Done');
+    vscode.window.setStatusBarMessage('Synchronize Done.');
+    console.log(defStore);
+    console.log(fileRelation);
+    console.log(refStore);
 }
 
-function getRelationWords(document, position) {
-    let line = document.lineAt(position).text;
-    line = line.substr(0, position.character);
-    let exp = "\\b([a-zA-Z0-9_]+\\.)+";
+function getCompletionRelationWords(document, position, word) {
+    let line = document.lineAt(position.line).text;
+    let exp = "\\b([a-zA-Z0-9_]+\\.)?" + word;
     let ret = doRegexSearch(exp, line, "all");
     if (!ret.isMatch()) {
         return null;
     }
-    let words = ret.getLastMatchWord();
-    words = words.substr(0, words.length - 1);
-    return words.split(".");
+    let match = ret.getLastMatch();
+    ret.getAllMatch().forEach( str => {
+        if (str.length + ret.getCharacter(str) - position.character <= word.length) {
+            match = str;
+        }
+    });
+    
+    let words = match.split(".");
+    return words;
 }
 
-function getDefinePositionbyFile(fileName, word) {
-    let retval = definitionStore.getRepeatDefByFileName(word, fileName)
-    if (retval === null) {
-        return [definitionStore.getDefFileName(word), definitionStore.getDefFilePosition(word)];
-    } else {
-        return retval;
-    }
-}
-
-function findDefinitionsInSync(document, word, position) {
-    if (!definitionStore.isKnownDef(word)) {
+function getRelationWords(document, position, word) {
+    let line = document.lineAt(position.line).text;
+    let exp = "\\b([a-zA-Z0-9_]+\\.)" + word;
+    let ret = doRegexSearch(exp, line, "all");
+    if (!ret.isMatch()) {
         return null;
     }
-    if (!definitionStore.isRepeatDef(word)) {
-        return [definitionStore.getDefFileName(word), definitionStore.getDefFilePosition(word)];
+    let match = ret.getLastMatch();
+    ret.getAllMatch().forEach( str => {
+        if (str.length + ret.getCharacter(str) - position.character <= word.length) {
+            match = str;
+        }
+    });
+    
+    let words = match.split(".");
+    return words;
+}
+
+function getNearestDetail(defDetails, fileName, position) {
+    var Oposition = new defProH.CPosition(fileName, position.line, position.character);
+    var sameFileExists = false;
+    var priority = 0xffffffff;
+    var retval = null;
+    defDetails.forEach(defDetail => {
+        if (defDetail.getPosition().file === fileName) {
+            sameFileExists = true;
+        } else if (sameFileExists === true) {
+            return;
+        }
+        var priorityTmp = defDetail.getPosition().compare(Oposition);
+        if (priority < priorityTmp) {
+            return;
+        }
+        priority = priorityTmp;
+        retval = defDetail;
+    });
+    return retval;
+}
+
+function getDefNormal(fileName, word, position) {
+    let defDetails = defStore.getDefByFileName(word, fileName);
+    let retval = null;
+    if (defDetails.length === 0) {
+        let fileRelated = fileRelation.getFileRelation(fileName);
+        if (fileRelated !== null) {
+            fileRelated.some(relatedFile => {
+                defDetails = defStore.getDefByFileName(word, relatedFile);
+                if (defDetails.length !== 0) {
+                    return true;
+                }
+            });
+        }
     }
+    if (defDetails.length !== 0) {
+        getNearestDetail(defDetails, fileName, position);
+    }
+    if (retval === null) {
+        retval = defStore.getDefFirst(word);
+    }
+    return retval;
+}
+
+function findDefinitionsInStore(document, word, position) {
     var words = null;
-    if ((words = getRelationWords(document, position)) === null) {
-        return getDefinePositionbyFile(document.fileName, word);
+    if ((words = getRelationWords(document, position, word)) !== null) {
+        words.pop();
+        let structInfo = getDefinitionCompletionItem(document, position, words);
+        if (structInfo !== null) {
+            if (structInfo.isElement(word)) {
+                return structInfo.getElementDetail(word);
+            }
+            return null;
+        }
+        return null;
+    } else {
+        if (!defStore.isDef(word)) {
+            return null;
+        }
+        if (!defStore.isDefMulti(word)) {
+            return defStore.getDefFirst(word);
+        }
+        return getDefNormal(document.fileName, word, position);
     }
-    let typeInfo = getDefinitionCompletionItem(document, position, words);
-    if (typeInfo === null) {
-        return getDefinePositionbyFile(document.fileName, word);
-    }
-    if (!typeInfo.isKnownVariable(word)) {
-        return getDefinePositionbyFile(document.fileName, word);
-    }
-    let PositionInfo = typeInfo.getVariablePositionInfo(word);
-    let DefinePositionInfo = definitionStore.getRepeatDefExactInfo(word, PositionInfo);
-    if (DefinePositionInfo === null) {
-        return getDefinePositionbyFile(document.fileName, word);
-    }
-    return [DefinePositionInfo[0], new vscode.Position(DefinePositionInfo[1], DefinePositionInfo[2])];
 }
 
-function findDefinitionsInCurFile(document, position, word) {
-    var line = position.line - 1;
-    while (line >= 0) {
-        var line_text = document.lineAt(line);
-        var column = getNameInLine(line_text.text, "all", defexpr.d_exp).getWordPostion(word);
-        if ( column !== null ) {
-            return [document.fileName, new vscode.Position(line, column)];
-        }
-        line -= 1;
+function findReferencesInStore(document, word, position) {
+    if (!refStore.isRef(word)) {
+        return null;
     }
-    return null;
+    return refStore.getRef(word);
 }
 
-function findDefinitionsInFile(file, word) {
-    var column = null;
-    var ret = null;
-    var index = 0;
-    var data = fs.readFileSync(file, 'utf8');
-    var data_p = data.split('\n');
-    data_p.some(line => {
-        column = getNameInLine(line, "all", defexpr.d_exp).getWordPostion(word);
-        if (column !== null) {
-            ret = new vscode.Position(index, column);
-            return true;
+function getCompletionElememtDetail(fileName, word, position) {
+    if (!defStore.isDef(word)) {
+        return null;
+    }
+    var defDetail = null;
+    if (!defStore.isDefMulti(word)) {
+        defDetail = defStore.getDefFirst(word);
+    } else {
+        let defDetails = defStore.getDefByDefType(word, "variable");
+        if (defDetails.length === 0) {
+            defDetails = defStore.getDefByDefType(word, "function");
+            if (defDetails.length === 0) {
+                defDetails = defStore.getDefByDefType(word, "table");
+                if (defDetails.length === 0) {
+                    return null;
+                }
+            }
         }
-        index += 1;
-    });
-    return ret;
-}
-
-function findDefinitionsInAllFile(workDir, fileName, word) {
-    var files = fs.readdirSync(workDir);
-    var ret = null;
-    var retPos = null;
-    files.some(file => {
-        var s = file.substr(0,1);
-        if (s === ".") {
-            return false;
-        }
-        s = file.substr(-3,3);
-        if (s !== ".p4") {
-            return false;
-        }
-        if (file === path.basename(fileName)) {
-            return false;
-        }
-        retPos = findDefinitionsInFile(path.join(workDir, file), word);
-        if (retPos !== null) {
-            ret = [path.join(workDir, file), retPos];
-            return true;
-        }
-    });
-    return ret;
+        defDetail = getNearestDetail(defDetails, fileName, position);
+    }
+    return defDetail;
 }
 
 function getDefinitionCompletionItem(document, position, words) {
-    var typeInfo = null;
-    let ret = findDefinitionsInCurFile(document, position, words[0]);
-    if (ret === null) {
+    let defDetail = getCompletionElememtDetail(document.fileName, words[0], position);
+    if (defDetail === null) {
         return null;
     }
-    let typeName = getNameInLine(document.lineAt(ret[1].line).text, "all", defexpr.vt_exp).getFirstMatchWord();
-    if (typeName === null) {
-        return null;
+    if (defDetail.getDefType() == "variable") {
+        defDetail = getCompletionElememtDetail(document.fileName, defDetail.getVariableType(), position);
     }
-    if (definitionStore.isKnownTypedef(typeName)) {
-        typeName = definitionStore.getTypedefInfo(typeName);
-    }
-    if (!definitionStore.isKnownType(typeName)) {
-        return null;
-    }
-    typeInfo = definitionStore.getTypeInfo(typeName);
     words.shift();
-    words.some( word => {
-        if (!typeInfo.isKnownVariable(word)) {
-            typeInfo = null;
-            return true;
+    for (var i = 0; i < words.length; i++) {
+        let word = words[i];
+        if (!defDetail.getStructInfo().isElement(word)) {
+            return null;
         }
-        typeName = typeInfo.getVariableTypeName(word);
-        if (definitionStore.isKnownTypedef(typeName)) {
-            typeName = definitionStore.getTypedefInfo(typeName);
+        let defDetailInner = defDetail.getStructInfo().getElementDetail(word);
+        if (defDetailInner === null) {
+            if (i !== words.length - 1) {
+                return null;
+            }
+            break;
         }
-        if (!definitionStore.isKnownType(typeName)) {
-            typeInfo = null;
-            return true;
+        let typeName = defDetailInner.getVariableType();
+        defDetail = getCompletionElememtDetail(document.fileName, typeName, position);
+        if (defDetail === null) {
+            return null;
         }
-        typeInfo = definitionStore.getTypeInfo(typeName);
-    })
-    return typeInfo;
+    }
+    return defDetail.getStructInfo();
 }
 
-exports.findDefinitionsInSync = findDefinitionsInSync;
-exports.findDefinitionsInAllFile = findDefinitionsInAllFile;
-exports.findDefinitionsInCurFile = findDefinitionsInCurFile;
-
+exports.findDefinitionsInStore = findDefinitionsInStore;
+exports.findReferencesInStore = findReferencesInStore;
 exports.definitionSync = definitionSync;
 exports.getDefinitionCompletionItem = getDefinitionCompletionItem;
+exports.getCompletionRelationWords = getCompletionRelationWords;
