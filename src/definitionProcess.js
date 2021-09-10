@@ -275,6 +275,23 @@ function getMultiLineVariableNameAndLine(lineNum, data_p) {
     return [null, 0, 0];
 }
 
+function getVariableDefinition(file, line, lineNum) {
+    let ret = getNameInLine(line, "all", defexpr.variable_exp);
+    if (ret.isMatch()) {
+        let ret2 = getNameInLine(line, "all", defexpr.variable_type_exp);
+        if (ret.getMatchNum() === ret2.getMatchNum()) {
+            for (var i = 0; i < ret.getMatchNum(); i++) {
+                let variableName = ret.getMatchByIndex(i);
+                let variableCharacter = ret.getCharacterByIndex(i);
+                let variableTypeName = ret2.getMatchByIndex(i);
+                let defDetail = generateVariableDefDetail(file, lineNum, variableCharacter, variableTypeName);
+                defStore.addDef(variableName, defDetail);
+            }
+        }
+    }
+    return ret.isMatch();
+}
+
 function getDefinitionsInFile(file) {
     var ret = null;
     var data = fs.readFileSync(file, 'utf8');
@@ -308,6 +325,7 @@ function getDefinitionsInFile(file) {
         if (ret.isMatch()) {
             let defDetail = generateFuncDefDetail(file, lineNum, ret.getOneCharacter());
             defStore.addDef(ret.getOneMatch(), defDetail);
+            getVariableDefinition(file, line, lineNum);
             continue;
         }
         ret = getNameInLine(line, "one", defexpr.define_exp);
@@ -331,19 +349,8 @@ function getDefinitionsInFile(file) {
                 defStore.addDef(ret.getOneMatch(), defDetail);
             }
         }
-        ret = getNameInLine(line, "all", defexpr.variable_exp);
-        if (ret.isMatch()) {
-            let ret2 = getNameInLine(line, "all", defexpr.variable_type_exp);
-            if (ret.getMatchNum() === ret2.getMatchNum()) {
-                for (var i = 0; i < ret.getMatchNum(); i++) {
-                    let variableName = ret.getMatchByIndex(i);
-                    let variableCharacter = ret.getCharacterByIndex(i);
-                    let variableTypeName = ret2.getMatchByIndex(i);
-                    let defDetail = generateVariableDefDetail(file, lineNum, variableCharacter, variableTypeName);
-                    defStore.addDef(variableName, defDetail);
-                }
-                continue;
-            }
+        if (getVariableDefinition(file, line, lineNum)) {
+            continue;
         }
         ret = getNameInLine(line, "one", defexpr.struct_exp);
         if (ret.isMatch()) {
@@ -450,11 +457,12 @@ function getRelationWords(document, position, word) {
     let exp = "([a-zA-Z0-9_]+\\.)+" + word;
     let ret = doRegexSearch(exp, line, "all");
     if (!ret.isMatch()) {
-        return null;
+        return [];
     }
-    let match = ret.getLastMatch();
+    let match = "";
     ret.getAllMatch().forEach( str => {
-        if (str.length + ret.getCharacter(str) - position.character <= word.length) {
+        let wordStartIndex = str.length + ret.getCharacter(str) - word.length;
+        if ( wordStartIndex <= position.character && wordStartIndex + word.length >= position.character) {
             match = str;
         }
     });
@@ -507,8 +515,8 @@ function getDefNormal(fileName, word, position) {
 }
 
 function findDefinitionsInStore(document, word, position) {
-    var words = null;
-    if ((words = getRelationWords(document, position, word)) !== null) {
+    var words = getRelationWords(document, position, word);
+    if (words.length > 1) {
         words.pop();
         let structInfo = getDefinitionCompletionItem(document, position, words);
         if (structInfo !== null) {
