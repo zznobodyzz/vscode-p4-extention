@@ -41,6 +41,67 @@ function CrefStore() {
     }
 }
 
+function CsymbolInfo() {
+    this.symbolKind = null;
+    this.range = null;
+    this.container = null;
+
+    this.setSymbolKind = function(symbolKind) {
+        this.symbolKind = symbolKind;
+    }
+
+    this.setRange = function(positionStart, length) {
+        let positionEnd = new vscode.Position(positionStart.line, positionStart.character + length);
+        this.range = new vscode.Range(positionStart, positionEnd);
+    }
+
+    this.setContainer = function(container) {
+        this.container = container;
+    }
+    
+    this.getSymbolKind = function() {
+        return this.symbolKind;
+    }
+
+    this.getRange = function() {
+        return this.range;
+    }
+
+    this.getContainer = function() {
+        return this.container;
+    }
+}
+
+function CsymbolStore() {
+    this.store = {};
+
+    this.addSymbol = function(name, symbolInfo) {
+        if (!this.isSymbol(name)) {
+            this.store[name] = [];
+        }
+        this.store[name].push(symbolInfo);
+    }
+    
+    this.isSymbol = function(name) {
+        return (this.store[name] !== undefined);
+    }
+
+    this.getSymbols = function() {
+        return Object.keys(this.store);
+    }
+
+    this.getSymbol = function(name) {
+        if (this.isSymbol(name)) {
+            return this.store[name];
+        }
+        return null;
+    }
+
+    this.getSymbolNum = function() {
+        return Object.keys(this.store).length;
+    }
+}
+
 function CdefDetail() {
     this.position = null;
     this.defType = null;
@@ -132,11 +193,7 @@ function CstructInfo() {
     }
 
     this.getElements = function() {
-        let element = Object.keys(this.store);
-        if (element.length === 0) {
-            return null;
-        }
-        return element;
+        return Object.keys(this.store);
     }
 
     this.getStructLineNum = function() {
@@ -219,11 +276,15 @@ function CdefStore() {
         return (Object.keys(this.store[name]).length > 1);
     }
 
-    this.getDefAll = function(name) {
+    this.getDefDetailAll = function(name) {
         if (!this.isDef(name)) {
             return [];
         }
         return this.store[name];
+    }
+
+    this.getDefAll = function() {
+        return Object.keys(this.store);
     }
 }
 
@@ -336,6 +397,8 @@ function CfileRelation() {
 
 exports.CPosition = CPosition;
 exports.CrefStore = CrefStore;
+exports.CsymbolInfo = CsymbolInfo;
+exports.CsymbolStore = CsymbolStore;
 exports.CdefDetail = CdefDetail;
 exports.CstructInfo = CstructInfo;
 exports.CdefStore = CdefStore;

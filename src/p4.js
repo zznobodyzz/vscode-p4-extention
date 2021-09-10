@@ -8,6 +8,7 @@ exports.activate = function(context) {
     require('./gotoReference')(context); // 跳转到引用
     require('./hover')(context); // 悬停提示
     require('./completion')(context); // 自动补全
+    require('./symbol')(context); // outline索引
     defpro.definitionSync(vscode.workspace.workspaceFolders[0].uri);
     vscode.window.setStatusBarMessage('Welcome To P4 Extention!  Synchronize Done.');
 };

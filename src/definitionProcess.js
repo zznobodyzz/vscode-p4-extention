@@ -13,6 +13,7 @@ let defStore = new defProH.CdefStore();
 let fileRelation = new defProH.CfileRelation();
 let CregexSearchResult = defProH.CregexSearchResult;
 let refStore = new defProH.CrefStore();
+let defTypes = ['function', 'state', 'alias', 'define', 'variable', 'enum', 'enum_variable', 'sdk_obj', 'sdk_func', 'table', 'struct'];
 
 function doRegexSearch(exp, string, search_mode) {
     var searchResult = new CregexSearchResult();
@@ -292,6 +293,18 @@ function getVariableDefinition(file, line, lineNum) {
     return ret.isMatch();
 }
 
+function stripLine(line) {
+    let commentIndex = line.search("\\/\\/");
+    if (commentIndex !== -1) {
+        line = line.substr(0, commentIndex);
+    }
+    commentIndex = line.search("\\/\\*");
+    if (commentIndex !== -1) {
+        line = line.substr(0, commentIndex);
+    }
+    return line;
+}
+
 function getDefinitionsInFile(file) {
     var ret = null;
     var data = fs.readFileSync(file, 'utf8');
@@ -299,6 +312,7 @@ function getDefinitionsInFile(file) {
     var skip = 1;
     for (var lineNum = 0; lineNum < data_p.length; lineNum+=skip) {
         let line = data_p[lineNum];
+        line = stripLine(line);
         skip = 1;
         ret = getNameInLine(line, "one", defexpr.anti_exp);
         if (ret.isMatch()) {
@@ -544,6 +558,67 @@ function findReferencesInStore(document, word, position) {
     return refStore.getRef(word);
 }
 
+function setSymbolKind(typeName, symbolInfo) {
+    if (typeName === "function") {
+        symbolInfo.setSymbolKind(vscode.SymbolKind.Function);
+    } else if (typeName === "state") {
+        symbolInfo.setSymbolKind(vscode.SymbolKind.Event);
+    } else if (typeName === "alias") {
+        symbolInfo.setSymbolKind(vscode.SymbolKind.Constant);
+    } else if (typeName === "define") {
+        symbolInfo.setSymbolKind(vscode.SymbolKind.Constant);
+    } else if (typeName === "variable") {
+        symbolInfo.setSymbolKind(vscode.SymbolKind.Variable);
+    } else if (typeName === "enum") {
+        symbolInfo.setSymbolKind(vscode.SymbolKind.Enum);
+    } else if (typeName === "enum_variable") {
+        symbolInfo.setSymbolKind(vscode.SymbolKind.EnumMember);
+    } else if (typeName === "sdk_obj") {
+        symbolInfo.setSymbolKind(vscode.SymbolKind.Object);
+    } else if (typeName === "sdk_func") {
+        symbolInfo.setSymbolKind(vscode.SymbolKind.Method);
+    } else if (typeName === "table") {
+        symbolInfo.setSymbolKind(vscode.SymbolKind.Field);
+    } else if (typeName === "struct") {
+        symbolInfo.setSymbolKind(vscode.SymbolKind.Field);
+    } else {
+        symbolInfo.setSymbolKind(vscode.SymbolKind.Null);
+    }
+}
+
+function AddStructSymbol(structInfo, name, symbolStore) {
+    structInfo.getElements().forEach( element => {
+        let defDetail = structInfo.getElementDetail(element);
+        if (defDetail !== null) {
+            let symbolInfo = new defProH.CsymbolInfo();
+            setSymbolKind(defDetail.getDefType(), symbolInfo);
+            symbolInfo.setContainer(name);
+            symbolInfo.setRange(defDetail.getPosition().position, name.length);
+            symbolStore.addSymbol(element, symbolInfo);
+        }
+    });
+}
+
+function findSymbolsInStore(fileName) {
+    let symbolStore = new defProH.CsymbolStore();
+    let defNames = defStore.getDefAll();
+    defNames.forEach( name => {
+        let defDetails = defStore.getDefByFileName(name, fileName);
+        defDetails.forEach( defDetail => {
+            let symbolInfo = new defProH.CsymbolInfo();
+            let typeName = defDetail.getDefType();
+            setSymbolKind(typeName, symbolInfo);
+            symbolInfo.setRange(defDetail.getPosition().position, name.length);
+            symbolStore.addSymbol(name, symbolInfo);
+            if (defDetail.getStructInfo() !== null) {
+                AddStructSymbol(defDetail.getStructInfo(), name, symbolStore);
+            }
+        });
+    });
+    console.log(symbolStore);
+    return symbolStore;
+}
+
 function getMultiCompletionElememtDetail(word) {
     let defDetails = defStore.getDefByDefType(word, "variable");
     if (defDetails.length !== 0) {
@@ -565,7 +640,7 @@ function getMultiCompletionElememtDetail(word) {
     if (defDetails.length !== 0) {
         return defDetails;
     }
-    return defStore.getDefAll(word);
+    return defStore.getDefDetailAll(word);
 }
 
 function getCompletionElememtDetail(fileName, word, position) {
@@ -618,6 +693,7 @@ function getDefinitionCompletionItem(document, position, words) {
 
 exports.findDefinitionsInStore = findDefinitionsInStore;
 exports.findReferencesInStore = findReferencesInStore;
+exports.findSymbolsInStore = findSymbolsInStore;
 exports.definitionSync = definitionSync;
 exports.getDefinitionCompletionItem = getDefinitionCompletionItem;
 exports.getCompletionRelationWords = getCompletionRelationWords;
