@@ -52,7 +52,7 @@
 		"keywords": {
 			"patterns": [{
 				"name": "keyword.control.p4",
-				"match": "\\b(if|exit|accept|select|transition|in|inout|out)\\b"
+				"match": "\\b(if|else|exit|accept|select|transition|in|inout|out)\\b"
 			},{
 				"name": "constant.numeric.p4",
 				"match": "(&&&)|(&&)|(\\|\\|)|(==)|(@)"
@@ -92,7 +92,7 @@
 				"match": "\\btypedef\\b"
 			},{
 				"name": "support.variable.p4",
-				"match": "\\b(key|actions|size|default_action|initial_value)\\b"
+				"match": "\\b(key|actions|size|default_action|initial_value|implementation)\\b"
 			},{
 				"name": "constant.character.escape.p4",
 				"match": "[a-zA-Z0-9_\\.]+(?=(\\s?*\\:))"

@@ -80,7 +80,7 @@ function getSdkFuncInfo(file, data_p, lineNum) {
     return structInfo;
 }
 
-function getStructureInfo(file, data_p, lineNum) {
+function getStructureInfo(file, data_p, lineNum, defType) {
     var structInfo = new defProH.CstructInfo();
     var op = 0;
     var set = false;
@@ -120,6 +120,11 @@ function getStructureInfo(file, data_p, lineNum) {
         structInfo.addElememtDetail(variableName, defDetail);
     }
     structInfo.setStructLineNum(i - lineNum);
+    if (defType === "header") {
+        structInfo.addElememtDetail("isValid()", null);
+        structInfo.addElememtDetail("setValid()", null);
+        structInfo.addElememtDetail("setInvalid()", null);
+    }
     return structInfo;
 }
 
@@ -229,7 +234,7 @@ function generateAliasDefDetail(file, lineNum, character, originName) {
 function generateStructDefDetail(file, lineNum, character, data_p, defType) {
     let defDetail = new defProH.CdefDetail();
     let position = new defProH.CPosition(file, lineNum, character);
-    let structInfo = getStructureInfo(file, data_p, lineNum);
+    let structInfo = getStructureInfo(file, data_p, lineNum, defType);
     defDetail.setDefType(defType);
     defDetail.setPosition(position);
     defDetail.setStructInfo(structInfo);
@@ -244,6 +249,30 @@ function generateEnumDefDetail(file, lineNum, character, data_p) {
     defDetail.setPosition(position);
     defDetail.setStructInfo(structInfo);
     return defDetail;
+}
+
+function getMultiLineVariableNameAndLine(lineNum, data_p) {
+    var pairs = 1;
+    for (var i = lineNum + 1; i < data_p.length; i++) {
+        if (data_p[i].search("\\(") !== -1 ) {
+            pairs++;
+        }
+        if (data_p[i].search("\\)") !== -1 ) {
+            pairs--;
+        }
+        if (pairs === 0) {
+            let ret = getNameInLine(data_p[i], "one", defexpr.multi_line_variable_expr);
+            if (ret.isMatch()) {
+                return [ret.getOneMatch(), i, ret.getOneCharacter()];
+            }
+            ret = getNameInLine(data_p[i + 1], "one", defexpr.multi_line_variable_expr);
+            if (ret.isMatch()) {
+                return [ret.getOneMatch(), i + 1, ret.getOneCharacter()];
+            }
+            return [null, 0, 0];
+        }
+    }
+    return [null, 0, 0];
 }
 
 function getDefinitionsInFile(file) {
@@ -337,6 +366,20 @@ function getDefinitionsInFile(file) {
             skip = defDetail.getStructInfo().getStructLineNum();
             continue;
         }
+        ret = getNameInLine(line, "one", defexpr.multi_line_sdk_expr);
+        if (ret.isMatch()) {
+            let variableTypeName = ret.getOneMatch();
+            let retval = getMultiLineVariableNameAndLine(lineNum, data_p);
+            let variableName = retval[0];
+            let variableNameLine = retval[1];
+            let variableNameCharacter = retval[2];
+            if (variableName !== null) {
+                let defDetail = generateVariableDefDetail(file, variableNameLine, variableNameCharacter, variableTypeName);
+                defStore.addDef(variableName, defDetail);
+                skip = variableNameLine - lineNum + 1;
+            }
+            continue;
+        }
     }
 }
 
@@ -380,6 +423,7 @@ function definitionSync(uri) {
             getReferencesInFile(path.join(workDir, file));
         }
     });
+    console.log(defStore);
     vscode.window.setStatusBarMessage('Synchronize Done.');
 }
 
@@ -403,7 +447,7 @@ function getCompletionRelationWords(document, position, word) {
 
 function getRelationWords(document, position, word) {
     let line = document.lineAt(position.line).text;
-    let exp = "\\b([a-zA-Z0-9_]+\\.)" + word;
+    let exp = "([a-zA-Z0-9_]+\\.)+" + word;
     let ret = doRegexSearch(exp, line, "all");
     if (!ret.isMatch()) {
         return null;
@@ -414,7 +458,6 @@ function getRelationWords(document, position, word) {
             match = str;
         }
     });
-    
     let words = match.split(".");
     return words;
 }
@@ -455,7 +498,7 @@ function getDefNormal(fileName, word, position) {
         }
     }
     if (defDetails.length !== 0) {
-        getNearestDetail(defDetails, fileName, position);
+        retval = getNearestDetail(defDetails, fileName, position);
     }
     if (retval === null) {
         retval = defStore.getDefFirst(word);
@@ -493,6 +536,30 @@ function findReferencesInStore(document, word, position) {
     return refStore.getRef(word);
 }
 
+function getMultiCompletionElememtDetail(word) {
+    let defDetails = defStore.getDefByDefType(word, "variable");
+    if (defDetails.length !== 0) {
+        return defDetails;
+    }
+    defDetails = defStore.getDefByDefType(word, "struct");
+    if (defDetails.length !== 0) {
+        return defDetails;
+    }
+    defDetails = defStore.getDefByDefType(word, "header");
+    if (defDetails.length !== 0) {
+        return defDetails;
+    }
+    defDetails = defStore.getDefByDefType(word, "function");
+    if (defDetails.length !== 0) {
+        return defDetails;
+    }
+    defDetails = defStore.getDefByDefType(word, "table");
+    if (defDetails.length !== 0) {
+        return defDetails;
+    }
+    return defStore.getDefAll(word);
+}
+
 function getCompletionElememtDetail(fileName, word, position) {
     if (!defStore.isDef(word)) {
         return null;
@@ -501,17 +568,12 @@ function getCompletionElememtDetail(fileName, word, position) {
     if (!defStore.isDefMulti(word)) {
         defDetail = defStore.getDefFirst(word);
     } else {
-        let defDetails = defStore.getDefByDefType(word, "variable");
-        if (defDetails.length === 0) {
-            defDetails = defStore.getDefByDefType(word, "function");
-            if (defDetails.length === 0) {
-                defDetails = defStore.getDefByDefType(word, "table");
-                if (defDetails.length === 0) {
-                    return null;
-                }
-            }
+        let defDetails = getMultiCompletionElememtDetail(word);
+        if (defDetails.length > 1) {
+            defDetail = getNearestDetail(defDetails, fileName, position);
+        } else {
+            defDetail = defDetails[0];
         }
-        defDetail = getNearestDetail(defDetails, fileName, position);
     }
     return defDetail;
 }
@@ -521,7 +583,7 @@ function getDefinitionCompletionItem(document, position, words) {
     if (defDetail === null) {
         return null;
     }
-    if (defDetail.getDefType() == "variable") {
+    if (defDetail.getDefType() === "variable") {
         defDetail = getCompletionElememtDetail(document.fileName, defDetail.getVariableType(), position);
     }
     words.shift();

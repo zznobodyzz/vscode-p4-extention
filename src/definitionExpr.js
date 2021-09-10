@@ -2,7 +2,8 @@
 '([a-zA-Z_]([a-zA-Z0-9_])*)'
 
 //match a not concern line
-const anti_match_expr = ["\\btransition\\b",
+const anti_match_expr = ["\\b(transition)\\b",
+                         '(@defaultonly)\\b',
                          "^\\/\\/",
                          "^\\/\\*"];
 //match a include
@@ -38,9 +39,16 @@ const variable_type_match_expr = ['(int|bool|bit<.*>)(?=(\\s+[a-zA-Z0-9_]+\\s*(\
                                   '[a-zA-Z0-9_]+(?=((\\[[0-9]+\\])?\\s+[a-zA-Z0-9_]+\\s*(\\=\\s*[a-zA-Z0-9_]+\\s*)?[;,\\)]))',
                                   '(?<=(^\\s*))[a-zA-Z0-9_]+(?=((<.*>)?\\(.*\\)\\s+[a-zA-Z0-9_]+\\s*[;,\\)]))'];
 //match a element in a enum structure
-const enum_variable_match_expr = ['[A-Z0-9_]+(?=(\\s*(\\=\\s?[a-zA-Z0-9_]+\\s*,)?))'];
+const enum_variable_match_expr = ['[a-zA-Z0-9_]+(?=(\\s*(\\=\\s?[a-zA-Z0-9_]+\\s*,)?))'];
 //match a value in a enum variable define
-const enum_value_match_expr = ['(?<=([A-Z0-9_]+\\s*=\\s*))[0-9]+(?=(\\s*,?))'];
+const enum_value_match_expr = ['(?<=([a-zA-Z0-9_]+\\s*=\\s*))[0-9]+(?=(\\s*,?))'];
+
+//match a multi line sdk type
+const multi_line_sdk_def_match_expr = ['[a-zA-Z0-9_]+(?=(\\s*(<.*>)?\\s*\\(\\s*))'];
+//match a multi line variable definition
+const multi_line_variable_match_expr = ['(?<=(.*\\s*\\)\\s*))[a-zA-Z0-9_]+(?=(\\s*;))',
+                                        '(?<=(^\\s*))[a-zA-Z0-9_]+(?=(\\s*;))'];
+
 
 //match a variable name when using it
 const reference_match_expr = ['\\b([a-zA-Z_]([a-zA-Z0-9_])*)(?=(\\.))',
@@ -64,5 +72,9 @@ exports.origin_exp = typedef_origin_match_expr;
 exports.enum_exp = enum_match_expr;
 exports.enum_variable_exp = enum_variable_match_expr;
 exports.enum_value_exp = enum_value_match_expr;
+
+exports.multi_line_sdk_expr = multi_line_sdk_def_match_expr;
+exports.multi_line_variable_expr = multi_line_variable_match_expr;
+
 
 exports.ref_exp = reference_match_expr;
