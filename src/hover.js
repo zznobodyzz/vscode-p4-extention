@@ -23,5 +23,5 @@ function provideHover(document, position, token) {
 
 module.exports = function(context) {
     // 注册鼠标悬停提示
-    context.subscriptions.push(vscode.languages.registerHoverProvider('p4', provideHover));
+    context.subscriptions.push(vscode.languages.registerHoverProvider('p4', {provideHover}));
 };

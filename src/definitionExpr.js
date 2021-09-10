@@ -1,5 +1,5 @@
 //match a name
-const name_match_expr = ['([a-zA-Z_]([a-zA-Z0-9_])*)'];
+'([a-zA-Z_]([a-zA-Z0-9_])*)'
 
 //match a not concern line
 const anti_match_expr = ["\\btransition\\b",

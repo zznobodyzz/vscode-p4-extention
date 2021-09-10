@@ -7,7 +7,7 @@ const path = require('path');
 const fs = require('fs');
 const util = require('./util');
 const defexpr = require('./definitionExpr');
-const defProH = require('./definitionProcess_h');
+const defProH = require('./definitionProcessDefs');
 
 let defStore = new defProH.CdefStore();
 let fileRelation = new defProH.CfileRelation();
@@ -371,7 +371,6 @@ function definitionSync(uri) {
     } else {
         workDir = uri.fsPath;
     }
-    console.log(workDir);
     var files = fs.readdirSync(workDir);
     files.forEach(file => {
         var s1 = file.substr(0,1);
@@ -382,9 +381,6 @@ function definitionSync(uri) {
         }
     });
     vscode.window.setStatusBarMessage('Synchronize Done.');
-    console.log(defStore);
-    console.log(fileRelation);
-    console.log(refStore);
 }
 
 function getCompletionRelationWords(document, position, word) {
