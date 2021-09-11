@@ -1,7 +1,8 @@
 {
     "name": "p4",
-    "displayName": "p4",
-    "description": "",
+    "displayName": "Programmable Switch Language: P4",
+    "description": "an extention for developing Data forwarding program by P4 Language\n供使用P4语言在可编程交换等设备上开发数据转发逻辑",
+    "icon": "images/p4.png",
     "version": "0.1.0",
     "engines": {
         "vscode": "^1.59.0"
