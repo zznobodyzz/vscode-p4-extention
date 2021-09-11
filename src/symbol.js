@@ -6,6 +6,18 @@ const path = require('path');
 const fs = require('fs');
 const defpro = require('./definitionProcess');
 
+function generateDocumentSymbol(symbolInfo) {
+    return new vscode.DocumentSymbol(symbolInfo.getSymbolName(), symbolInfo.getDefType(), symbolInfo.getSymbolKind(), symbolInfo.getRange(), symbolInfo.getRange());
+}
+
+function generateDocumentSymbols(symbolInfos) {
+    var documentSymbols = [];
+    symbolInfos.forEach( symbolInfo => {
+        documentSymbols.push(new vscode.DocumentSymbol(symbolInfo.getSymbolName(), symbolInfo.getDefType(), symbolInfo.getSymbolKind(), symbolInfo.getRange(), symbolInfo.getRange()));
+    });
+    return documentSymbols;
+}
+
 function provideDocumentSymbols(document, token) {
     let symbolStore = defpro.findSymbolsInStore(document.fileName);
     if (symbolStore.getSymbolNum() === 0) {
@@ -16,7 +28,12 @@ function provideDocumentSymbols(document, token) {
         let symbolInfos = symbolStore.getSymbol(symbol);
         if (symbolInfos.length !== 0) {
             symbolInfos.forEach(symbolInfo => {
-                SymbolInformations.push(new vscode.SymbolInformation(symbol, symbolInfo.getSymbolKind(), symbolInfo.getRange(), symbolInfo.getContainer()))
+                let documentSymbol = generateDocumentSymbol(symbolInfo);
+                let childrens = symbolInfo.getChildren();
+                if (childrens !== null) {
+                    documentSymbol.children = generateDocumentSymbols(childrens);
+                }
+                SymbolInformations.push(documentSymbol);
             });
         }
     });

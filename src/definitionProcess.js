@@ -13,7 +13,6 @@ let defStore = new defProH.CdefStore();
 let fileRelation = new defProH.CfileRelation();
 let CregexSearchResult = defProH.CregexSearchResult;
 let refStore = new defProH.CrefStore();
-let defTypes = ['function', 'state', 'alias', 'define', 'variable', 'enum', 'enum_variable', 'sdk_obj', 'sdk_func', 'table', 'struct'];
 
 function doRegexSearch(exp, string, search_mode) {
     var searchResult = new CregexSearchResult();
@@ -223,10 +222,10 @@ function generateVariableDefDetail(file, lineNum, character, typeName) {
     return defDetail;
 }
 
-function generateAliasDefDetail(file, lineNum, character, originName) {
+function generateTypedefDefDetail(file, lineNum, character, originName) {
     let defDetail = new defProH.CdefDetail();
     let position = new defProH.CPosition(file, lineNum, character);
-    defDetail.setDefType("alias");
+    defDetail.setDefType("typedef");
     defDetail.setOriginName(originName);
     defDetail.setPosition(position);
     return defDetail;
@@ -355,13 +354,14 @@ function getDefinitionsInFile(file) {
             skip = defDetail.getStructInfo().getStructLineNum();
             continue;
         }
-        ret = getNameInLine(line, "one", defexpr.alias_exp);
+        ret = getNameInLine(line, "one", defexpr.typedef_alias_exp);
         if (ret.isMatch()) {
-            let ret2 = getNameInLine(line, "one", defexpr.origin_exp);
+            let ret2 = getNameInLine(line, "one", defexpr.typedef_origin_exp);
             if (ret2.isMatch()) {
-                let defDetail = generateAliasDefDetail(file, lineNum, ret.getOneCharacter(), ret2.getOneMatch());
+                let defDetail = generateTypedefDefDetail(file, lineNum, ret.getOneCharacter(), ret2.getOneMatch());
                 defStore.addDef(ret.getOneMatch(), defDetail);
             }
+            continue;
         }
         if (getVariableDefinition(file, line, lineNum)) {
             continue;
@@ -424,13 +424,10 @@ function definitionSync(uri) {
     vscode.window.setStatusBarMessage('Synchronizing...');
     defStore.clear();
     var workDir = null;
-    if (!uri) {
-        workDir = util.getProjectPath();
-        if (!workDir) {
-            vscode.window.showInformationMessage('Synchronizing Failed, Try Command In Right Click.');
-            return;
-        }
-    } else if (uri.path.search("\\.") !== -1){
+    if (uri === null) {
+        uri = vscode.workspace.workspaceFolders[0].uri;
+    }
+    if (uri.path.search("\\.") !== -1){
         workDir = path.dirname(uri.fsPath);
     } else {
         workDir = uri.fsPath;
@@ -558,45 +555,19 @@ function findReferencesInStore(document, word, position) {
     return refStore.getRef(word);
 }
 
-function setSymbolKind(typeName, symbolInfo) {
-    if (typeName === "function") {
-        symbolInfo.setSymbolKind(vscode.SymbolKind.Function);
-    } else if (typeName === "state") {
-        symbolInfo.setSymbolKind(vscode.SymbolKind.Event);
-    } else if (typeName === "alias") {
-        symbolInfo.setSymbolKind(vscode.SymbolKind.Constant);
-    } else if (typeName === "define") {
-        symbolInfo.setSymbolKind(vscode.SymbolKind.Constant);
-    } else if (typeName === "variable") {
-        symbolInfo.setSymbolKind(vscode.SymbolKind.Variable);
-    } else if (typeName === "enum") {
-        symbolInfo.setSymbolKind(vscode.SymbolKind.Enum);
-    } else if (typeName === "enum_variable") {
-        symbolInfo.setSymbolKind(vscode.SymbolKind.EnumMember);
-    } else if (typeName === "sdk_obj") {
-        symbolInfo.setSymbolKind(vscode.SymbolKind.Object);
-    } else if (typeName === "sdk_func") {
-        symbolInfo.setSymbolKind(vscode.SymbolKind.Method);
-    } else if (typeName === "table") {
-        symbolInfo.setSymbolKind(vscode.SymbolKind.Field);
-    } else if (typeName === "struct") {
-        symbolInfo.setSymbolKind(vscode.SymbolKind.Field);
-    } else {
-        symbolInfo.setSymbolKind(vscode.SymbolKind.Null);
-    }
-}
-
-function AddStructSymbol(structInfo, name, symbolStore) {
+function getChildrenSymbols(structInfo) {
+    var symbolInfoInners = [];
     structInfo.getElements().forEach( element => {
         let defDetail = structInfo.getElementDetail(element);
         if (defDetail !== null) {
             let symbolInfo = new defProH.CsymbolInfo();
-            setSymbolKind(defDetail.getDefType(), symbolInfo);
-            symbolInfo.setContainer(name);
-            symbolInfo.setRange(defDetail.getPosition().position, name.length);
-            symbolStore.addSymbol(element, symbolInfo);
+            symbolInfo.setSymbolName(element);
+            symbolInfo.setSymbolKind(defDetail.getDefType());
+            symbolInfo.setRange(defDetail.getPosition().position, element.length);
+            symbolInfoInners.push(symbolInfo);
         }
     });
+    return symbolInfoInners;
 }
 
 function findSymbolsInStore(fileName) {
@@ -607,12 +578,16 @@ function findSymbolsInStore(fileName) {
         defDetails.forEach( defDetail => {
             let symbolInfo = new defProH.CsymbolInfo();
             let typeName = defDetail.getDefType();
-            setSymbolKind(typeName, symbolInfo);
+            symbolInfo.setSymbolName(name);
+            symbolInfo.setSymbolKind(typeName);
             symbolInfo.setRange(defDetail.getPosition().position, name.length);
-            symbolStore.addSymbol(name, symbolInfo);
             if (defDetail.getStructInfo() !== null) {
-                AddStructSymbol(defDetail.getStructInfo(), name, symbolStore);
+                let symbolInfoInners = getChildrenSymbols(defDetail.getStructInfo());
+                if (symbolInfoInners.length !== 0) {
+                    symbolInfo.setChildren(symbolInfoInners);
+                }
             }
+            symbolStore.addSymbol(name, symbolInfo);
         });
     });
     console.log(symbolStore);

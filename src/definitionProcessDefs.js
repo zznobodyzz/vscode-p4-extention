@@ -3,6 +3,8 @@ const vscode = require('vscode');
 // @ts-ignore
 const path = require('path');
 
+let defTypes = ['function', 'state', 'typedef', 'define', 'variable', 'enum', 'enum_variable', 'sdk_obj', 'sdk_func', 'table', 'struct'];
+
 function CPosition(file, line, character) {
     this.file = file;
     this.line = line;
@@ -42,12 +44,43 @@ function CrefStore() {
 }
 
 function CsymbolInfo() {
+    this.symbolName = null;
     this.symbolKind = null;
     this.range = null;
-    this.container = null;
+    this.children = null;
+    this.defType = null;
 
-    this.setSymbolKind = function(symbolKind) {
-        this.symbolKind = symbolKind;
+    this.setSymbolName = function(symbolName) {
+        this.symbolName = symbolName;
+    }
+
+    this.setSymbolKind = function setSymbolKind(typeName) {
+        this.defType = typeName;
+        if (typeName === "function") {
+            this.symbolKind = vscode.SymbolKind.Function;
+        } else if (typeName === "state") {
+            this.symbolKind = vscode.SymbolKind.Event;
+        } else if (typeName === "typedef") {
+            this.symbolKind = vscode.SymbolKind.Constant;
+        } else if (typeName === "define") {
+            this.symbolKind = vscode.SymbolKind.Constant;
+        } else if (typeName === "variable") {
+            this.symbolKind = vscode.SymbolKind.Variable;
+        } else if (typeName === "enum") {
+            this.symbolKind = vscode.SymbolKind.Enum;
+        } else if (typeName === "enum_variable") {
+            this.symbolKind = vscode.SymbolKind.EnumMember;
+        } else if (typeName === "sdk_obj") {
+            this.symbolKind = vscode.SymbolKind.Object;
+        } else if (typeName === "sdk_func") {
+            this.symbolKind = vscode.SymbolKind.Method;
+        } else if (typeName === "table") {
+            this.symbolKind = vscode.SymbolKind.Field;
+        } else if (typeName === "struct") {
+            this.symbolKind = vscode.SymbolKind.Field;
+        } else {
+            this.symbolKind = vscode.SymbolKind.Null;
+        }
     }
 
     this.setRange = function(positionStart, length) {
@@ -55,20 +88,28 @@ function CsymbolInfo() {
         this.range = new vscode.Range(positionStart, positionEnd);
     }
 
-    this.setContainer = function(container) {
-        this.container = container;
+    this.setChildren = function(children) {
+        this.children = children;
     }
     
+    this.getSymbolName = function() {
+        return this.symbolName;
+    }
+
     this.getSymbolKind = function() {
         return this.symbolKind;
+    }
+
+    this.getDefType = function() {
+        return this.defType;
     }
 
     this.getRange = function() {
         return this.range;
     }
 
-    this.getContainer = function() {
-        return this.container;
+    this.getChildren = function() {
+        return this.children;
     }
 }
 

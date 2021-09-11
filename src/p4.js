@@ -9,8 +9,12 @@ exports.activate = function(context) {
     require('./hover')(context); // 悬停提示
     require('./completion')(context); // 自动补全
     require('./symbol')(context); // outline索引
-    defpro.definitionSync(vscode.workspace.workspaceFolders[0].uri);
-    vscode.window.setStatusBarMessage('Welcome To P4 Extention!  Synchronize Done.');
+    vscode.workspace.onDidSaveTextDocument(function(event) {defpro.definitionSync(event.uri);});
+    vscode.workspace.onDidOpenTextDocument(function(event) {defpro.definitionSync(event.uri);});
+    vscode.workspace.onDidDeleteFiles(function(event) {defpro.definitionSync(null);});
+    
+    defpro.definitionSync(null);
+    vscode.window.setStatusBarMessage('P4 Extention');
 };
 
 exports.deactivate = function() {
